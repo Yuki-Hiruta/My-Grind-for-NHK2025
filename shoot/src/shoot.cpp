@@ -71,27 +71,27 @@ float Shoot::getYaw(float x_r_, float y_r_, float theta_r_){
     return theta_yaw;
 }
 
-// float Shoot::getV_thetadomain(float x_r_, float y_r_, float theta_l_pre){
-//     theta_l = 2 * M_PI - theta_l_pre;
+float Shoot::getV_thetadomain(float x_r_, float y_r_, float theta_l_pre){
+    theta_l = 2 * M_PI - theta_l_pre;
 
-//     float l = hypot(y_g - y_r_, x_g - x_r_);
+    float l = hypot(y_g - y_r_, x_g - x_r_);
 
-//     pitch_thetadomein = acos(sqrt((l*l) / (pow(2*h - l * tan(theta_l), 2) + l*l)));
+    pitch_thetadomein = atan(((2*h)/l) - tan(theta_l));
 
-//     v_thetadomein = sqrt((g*(pow(2*h - l * tan(theta_l), 2) + l * l)) / (2 * (h - tan(theta_l)) / (2 * (h - l * tan(theta_l)))));
-//     return v_thetadomein;
-// }    //WIP
+    v_thetadomein = (l/cos(pitch_thetadomein)) * sqrt(l/(2*((l*tan(pitch_thetadomein)) - h)));
+    return v_thetadomein;
+}    
 
-// float Shoot::getPitch_thetadomain(float x_r_, float y_r_, float theta_l_pre){
-//     theta_l = 2 * M_PI - theta_l_pre;
+float Shoot::getPitch_thetadomain(float x_r_, float y_r_, float theta_l_pre){
+    theta_l = 2 * M_PI - theta_l_pre;
 
-//     float l = hypot(y_g - y_r_, x_g - x_r_);
+    float l = hypot(y_g - y_r_, x_g - x_r_);
 
-//     pitch_thetadomein = acos(sqrt((l*l) / (pow(2*h - l * tan(theta_l), 2) + l*l)));
+    pitch_thetadomein = atan(((2*h)/l) - tan(theta_l));
 
-//     v_thetadomein = sqrt((g*(pow(2*h - l * tan(theta_l), 2) + l * l)) / (2 * (h - tan(theta_l)) / (2 * (h - l * tan(theta_l)))));
-//     return pitch_thetadomein;
-// }    //WIP
+    v_thetadomein = (l/cos(pitch_thetadomein)) * sqrt(l/(2*((l*tan(pitch_thetadomein)) - h)));
+    return pitch_thetadomein;
+}    
 
 float Shoot::getPitch_maxV_high(float x_r_, float y_r_){
     float l = hypot(y_g - y_r_, x_g - x_r_);
@@ -126,13 +126,13 @@ float Shoot::getPitch_maxV_low(float x_r_, float y_r_){
 void Shoot::getVelocity(float x_r_, float y_r_, float theta_r_, float theta_l_pre, bool high_or_low){
     shootVelocity[2] = getYaw(x_r_, y_r_, theta_r_);
 
-    // if(getV_thetadomain(x_r_, y_r_, theta_l_pre) <= v_max)
-    // {
-    //     shootVelocity[1] = getPitch_thetadomain(x_r_, y_r_, theta_l_pre);
-    //     shootVelocity[0] = getV_thetadomain(x_r_, y_r_, theta_l_pre);
-    // }
-    // else
-    // {
+    if(getV_thetadomain(x_r_, y_r_, theta_l_pre) <= v_max)
+    {
+        shootVelocity[1] = getPitch_thetadomain(x_r_, y_r_, theta_l_pre);
+        shootVelocity[0] = getV_thetadomain(x_r_, y_r_, theta_l_pre);
+    }
+    else
+    {
         shootVelocity[0] = v_max;
         if(high_or_low)
         {
@@ -142,7 +142,7 @@ void Shoot::getVelocity(float x_r_, float y_r_, float theta_r_, float theta_l_pr
         {
             shootVelocity[1] = getPitch_maxV_low(x_r_, y_r_);
         }
-    // }
+    }
 }
 
 void Shoot::topic_callback(const geometry_msgs::msg::Pose & msg)
