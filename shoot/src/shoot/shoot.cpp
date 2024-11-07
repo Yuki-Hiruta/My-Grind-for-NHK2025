@@ -24,7 +24,7 @@ private:
     float getPitch_maxV_high(float x_r_, float y_r_);    //最大速度で撃つときのピッチ角（高い方）
     float getPitch_maxV_low(float x_r_, float y_r_); //最大速度で撃つときのピッチ角（低い方）
 
-    void calc_pose(float x_r, float y_r, float theta_l);
+    // void calc_pose(float x_r, float y_r, float theta_l);     //いつか機体の設計が固まったら射出口の自己位置を出すために使いたいものだなぁ
 
     bool high_or_low;   //pitchがhighかlowかの確認
 
@@ -58,8 +58,8 @@ Shoot::Shoot()
 : Node("shoot")
 {
     subscription_ = this->create_subscription<geometry_msgs::msg::Pose>("currentPose", 10, std::bind(&Shoot::topic_callback, this, _1));
-    publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("shootVelocity", 10);
-    publisher_ = this->create_publisher<rogidrive_msg::msg::RogidriveMessage>("odrive_cmd", 10);
+    publisher_micon = this->create_publisher<std_msgs::msg::Float64MultiArray>("shootVelocity", 10);
+    publisher_odrive = this->create_publisher<rogidrive_msg::msg::RogidriveMessage>("odrive_cmd", 10);
 
 }
 
@@ -121,32 +121,32 @@ float Shoot::getPitch_maxV_low(float x_s_, float y_s_){
     }
 }
 
-void Shoot::calc_pose(float x_r, float y_r, float theta_r){
-    x_s = x_r - l_1*sin(theta_r) - l_2*sin(theta_yaw);
-    y_s = y_r + l_1*cos(theta_r) - l_2*cos(theta_yaw);
-}
+// void Shoot::calc_pose(float x_r, float y_r, float theta_r){
+//     x_s = x_r - l_1*sin(theta_r) - l_2*sin(theta_yaw);
+//     y_s = y_r + l_1*cos(theta_r) - l_2*cos(theta_yaw);
+// }    //いつか機体の設計が固まったら射出口の自己位置を出すために使いたいものだなぁ
 
-void Shoot::getVelocity(float x_r_, float y_r_, float theta_r_, float theta_l_pre, bool high_or_low){
+void Shoot::getVelocity(float _x_r, float _y_r, float _theta_r, float _theta_l_pre, bool high_or_low){
 
-    calc_pose(x_r_, y_r_, theta_r_);
+    // calc_pose(x_r, y_r, theta_r);
 
-    shootVelocity[2] = getYaw(x_s, y_s, theta_s);
+    shootVelocity[2] = getYaw(_x_r, _y_r, _theta_r);
 
-    if(getV_thetadomain(x_s, y_s, theta_l_pre) <= v_max)
+    if(getV_thetadomain(_x_r, _y_r, _theta_l_pre) <= v_max)
     {
-        shootVelocity[1] = getPitch_thetadomain(x_s, y_s, theta_l_pre);
-        shootVelocity[0] = getV_thetadomain(x_s, y_s, theta_l_pre);
+        shootVelocity[1] = getPitch_thetadomain(_x_r, _y_r, _theta_l_pre);
+        shootVelocity[0] = getV_thetadomain(_x_r, _y_r, _theta_l_pre);
     }
     else
     {
         shootVelocity[0] = v_max;
         if(high_or_low)
         {
-            shootVelocity[1] = getPitch_maxV_high(x_s, y_s);
+            shootVelocity[1] = getPitch_maxV_high(_x_r, _y_r);
         }
         else
         {
-            shootVelocity[1] = getPitch_maxV_low(x_s, y_s);
+            shootVelocity[1] = getPitch_maxV_low(_x_r, _y_r);
         }
     }
 }
@@ -166,14 +166,14 @@ void Shoot::topic_callback(const geometry_msgs::msg::Pose & msg)
 
     message_micon.data = {shootVelocity[0], shootVelocity[1], shootVelocity[2]};
 
-    publisher_->publish(message_micon);
+    publisher_micon->publish(message_micon);
 
     auto message_odrive = rogidrive_msg::msg::RogidriveMessage();
     message_odrive.name = "motor1";
     message_odrive.mode = 0;
     message_odrive.vel = (shootVelocity[0] / radius) * k_rot;
     message_odrive.pos = 0.0;
-    publisher_->publish(message_odrive);
+    publisher_odrive->publish(message_odrive);
 
     // RCLCPP_INFO(this->get_logger(), "I heard position: [x: %f, y: %f, z: %f]", msg.position.x, msg.position.y, msg.position.z);
     // RCLCPP_INFO(this->get_logger(), "I heard orientation: [yaw: %f]", yaw);
