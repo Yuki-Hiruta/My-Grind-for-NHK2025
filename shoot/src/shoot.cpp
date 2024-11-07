@@ -25,8 +25,6 @@ private:
 
     void calc_pose(float x_r, float y_r, float theta_l);
 
-    float theta_r;  //機体の角度(rad)
-
     bool high_or_low;   //pitchがhighかlowかの確認
 
     float theta_pitch;  //射出装置の仰角(rad)
@@ -47,18 +45,13 @@ private:
     float y_s;        //射出装置のy座標
     float theta_s;    //射出装置のヨー角
 
-    float l_1;
-    float l_2;
-
-    float v_max;    //射出装置の最大初速
- 
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr subscription_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_;
- 
+
     std::array<float, 3> currentPose;
     std::array<float, 3> shootVelocity; //speed, pitch, yaw
 };
- 
+
 Shoot::Shoot()
 : Node("shoot")
 {

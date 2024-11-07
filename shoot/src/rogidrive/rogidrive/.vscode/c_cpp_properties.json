@@ -1,0 +1,33 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/moyuboo/ros2_ws/install/wheelctrl_ros2/include/**",
+        "/home/moyuboo/ros2_ws/install/rogilink3/include/**",
+        "/home/moyuboo/ros2_ws/install/rogilink3_interfaces/include/**",
+        "/home/moyuboo/ros2_ws/install/odom_wheel_lib/include/**",
+        "/home/moyuboo/ros2_ws/install/rogilink2/include/**",
+        "/home/moyuboo/ros2_ws/install/rogilink2_interfaces/include/**",
+        "/home/moyuboo/ros2_ws/install/rogidrive_msg/include/**",
+        "/home/moyuboo/ros2_ws/install/catch2023_interfaces/include/**",
+        "/opt/ros/humble/include/**",
+        "/home/moyuboo/ros2_ws/src/OdomWheelLib/odom_wheel_lib/include/**",
+        "/home/moyuboo/ros2_ws/src/RogiLink2/rogilink2/include/**",
+        "/home/moyuboo/ros2_ws/src/catch2023/catch2023_interfaces/include/**",
+        "/home/moyuboo/ros2_ws/src/nhk_2024/rogilink3/rogilink3/include/**",
+        "/home/moyuboo/ros2_ws/src/wheelctrl_ros2/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
