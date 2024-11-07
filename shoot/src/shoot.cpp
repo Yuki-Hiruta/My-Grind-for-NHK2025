@@ -23,11 +23,7 @@ private:
     float getPitch_maxV_high(float x_r_, float y_r_);    //最大速度で撃つときのピッチ角（高い方）
     float getPitch_maxV_low(float x_r_, float y_r_); //最大速度で撃つときのピッチ角（低い方）
 
-    float g;    //重力加速度(m/(s*s))
-
-    float h;    //ゴールの高さ(m)
-    float x_g;  //ゴールのx座標(m)
-    float y_g;  //ゴールのy座標(m)
+    void calc_pose(float x_r, float y_r, float theta_l);
 
     float theta_r;  //機体の角度(rad)
 
@@ -46,7 +42,13 @@ private:
     float theta_l;  //ボールの入射角
 
     float theta_g;  //ローカル座標のx軸とローカル座標中心とゴールを結んだ直線のなす角
-    float theta_yaw;    //射出装置のヨー角
+
+    float x_s;        //射出装置のx座標
+    float y_s;        //射出装置のy座標
+    float theta_s;    //射出装置のヨー角
+
+    float l_1;
+    float l_2;
 
     float v_max;    //射出装置の最大初速
  
@@ -65,36 +67,36 @@ Shoot::Shoot()
 
 }
 
-float Shoot::getYaw(float x_r_, float y_r_, float theta_r_){
-    float theta_yaw = atan((y_g - y_r_) / (x_g - x_r_)) - theta_r_;
+float Shoot::getYaw(float x_s_, float y_s_, float theta_s_){
+    float theta_yaw = atan((y_g - y_s_) / (x_g - x_s_)) - theta_r_;
 
     return theta_yaw;
 }
 
-float Shoot::getV_thetadomain(float x_r_, float y_r_, float theta_l_pre){
+float Shoot::getV_thetadomain(float x_s_, float y_s_, float theta_l_pre){
     theta_l = 2 * M_PI - theta_l_pre;
 
-    float l = hypot(y_g - y_r_, x_g - x_r_);
+    float l = hypot(y_g - y_s_, x_g - x_s_);
 
     pitch_thetadomein = atan(((2*h)/l) - tan(theta_l));
 
     v_thetadomein = (l/cos(pitch_thetadomein)) * sqrt(l/(2*((l*tan(pitch_thetadomein)) - h)));
     return v_thetadomein;
-}    
+}
 
-float Shoot::getPitch_thetadomain(float x_r_, float y_r_, float theta_l_pre){
+float Shoot::getPitch_thetadomain(float x_s_, float y_s_, float theta_l_pre){
     theta_l = 2 * M_PI - theta_l_pre;
 
-    float l = hypot(y_g - y_r_, x_g - x_r_);
+    float l = hypot(y_g - y_s_, x_g - x_s_);
 
     pitch_thetadomein = atan(((2*h)/l) - tan(theta_l));
 
     v_thetadomein = (l/cos(pitch_thetadomein)) * sqrt(l/(2*((l*tan(pitch_thetadomein)) - h)));
     return pitch_thetadomein;
-}    
+}
 
-float Shoot::getPitch_maxV_high(float x_r_, float y_r_){
-    float l = hypot(y_g - y_r_, x_g - x_r_);
+float Shoot::getPitch_maxV_high(float x_s_, float y_s_){
+    float l = hypot(y_g - y_s_, x_g - x_s_);
 
     if((1.0 - ((2.0*g / (v_max*v_max)) * (h + (l*l * g / (2.0*v_max*v_max))))) < 0)
     {
@@ -108,8 +110,8 @@ float Shoot::getPitch_maxV_high(float x_r_, float y_r_){
     }
 }
 
-float Shoot::getPitch_maxV_low(float x_r_, float y_r_){
-    float l = hypot(y_g - y_r_, x_g - x_r_);
+float Shoot::getPitch_maxV_low(float x_s_, float y_s_){
+    float l = hypot(y_g - y_s_, x_g - x_s_);
 
     if((1.0 - ((2.0*g / (v_max*v_max)) * (h + (l*l * g / (2.0*v_max*v_max))))) < 0)
     {
@@ -123,24 +125,32 @@ float Shoot::getPitch_maxV_low(float x_r_, float y_r_){
     }
 }
 
-void Shoot::getVelocity(float x_r_, float y_r_, float theta_r_, float theta_l_pre, bool high_or_low){
-    shootVelocity[2] = getYaw(x_r_, y_r_, theta_r_);
+void Shoot::calc_pose(float x_r, float y_r, float theta_l){
+    x_s = x_r_ - l_1*sin(theta_r) - l_2*sin(theta_yaw);
+    y_s = y_r_ + l_1*cos(theta_r) - l_2*cos(theta_yaw);
+}
 
-    if(getV_thetadomain(x_r_, y_r_, theta_l_pre) <= v_max)
+void Shoot::getVelocity(float x_r_, float y_r_, float theta_r_, float theta_l_pre, bool high_or_low){
+
+    calc_pose(x_r_, y_r_, theta_r_);
+
+    shootVelocity[2] = getYaw(x_s_, y_s_, theta_s_);
+
+    if(getV_thetadomain(x_s_, y_s_, theta_l_pre) <= v_max)
     {
-        shootVelocity[1] = getPitch_thetadomain(x_r_, y_r_, theta_l_pre);
-        shootVelocity[0] = getV_thetadomain(x_r_, y_r_, theta_l_pre);
+        shootVelocity[1] = getPitch_thetadomain(x_s_, y_s_, theta_l_pre);
+        shootVelocity[0] = getV_thetadomain(x_s_, y_s_, theta_l_pre);
     }
     else
     {
         shootVelocity[0] = v_max;
         if(high_or_low)
         {
-            shootVelocity[1] = getPitch_maxV_high(x_r_, y_r_);
+            shootVelocity[1] = getPitch_maxV_high(x_s_, y_s_);
         }
         else
         {
-            shootVelocity[1] = getPitch_maxV_low(x_r_, y_r_);
+            shootVelocity[1] = getPitch_maxV_low(x_s_, y_s_);
         }
     }
 }
@@ -162,8 +172,8 @@ void Shoot::topic_callback(const geometry_msgs::msg::Pose & msg)
 
     publisher_->publish(message);
 
-    RCLCPP_INFO(this->get_logger(), "I heard position: [x: %f, y: %f, z: %f]", msg.position.x, msg.position.y, msg.position.z);
-    RCLCPP_INFO(this->get_logger(), "I heard orientation: [yaw: %f]", yaw);
+    // RCLCPP_INFO(this->get_logger(), "I heard position: [x: %f, y: %f, z: %f]", msg.position.x, msg.position.y, msg.position.z);
+    // RCLCPP_INFO(this->get_logger(), "I heard orientation: [yaw: %f]", yaw);
 }
 
 int main(int argc, char * argv[])
