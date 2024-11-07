@@ -1,24 +1,8 @@
 {
     "motors": {
-        "FR": {
+        "motor1": {
             "serial": "3969345A3339",
             "axis": 0
-        },
-        "FL": {
-            "serial": "395E31623536",
-            "axis": 0
-        },
-        "BR": {
-            "serial": "3969345A3339",
-            "axis": 1
-        },
-        "BL": {
-            "serial": "395E31623536",
-            "axis": 1
-        },
-        "SHOOT": {
-            "serial": "208736A43756",
-            "axis": 1
         }
     }
 }

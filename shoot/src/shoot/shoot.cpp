@@ -5,7 +5,8 @@
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
- 
+#include "rogidrive_msg/msg/rogidrive_message.hpp"
+
 using std::placeholders::_1;
  
 class Shoot : public rclcpp::Node
@@ -18,8 +19,8 @@ private:
 
     void getVelocity(float x_r_, float y_r_, float theta_r_, float theta_l_pre, bool high_or_low);
     float getYaw(float x_r_, float y_r_, float theta_r_);
-    float getPitch_thetadomain(float x_r_, float y_r_, float theta_l_pre); //ボールの射出角が基準のピッチ角
-    float getV_thetadomain(float x_r_, float y_r_, float theta_l_pre); //ボールの射出角が基準の初速
+    float getPitch_thetadomain(float x_r_, float y_r_, float theta_l_pre); //ボールの落着角が基準のピッチ角
+    float getV_thetadomain(float x_r_, float y_r_, float theta_l_pre); //ボールの落着角が基準の初速
     float getPitch_maxV_high(float x_r_, float y_r_);    //最大速度で撃つときのピッチ角（高い方）
     float getPitch_maxV_low(float x_r_, float y_r_); //最大速度で撃つときのピッチ角（低い方）
 
@@ -47,9 +48,10 @@ private:
 
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr subscription_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr publisher_;
+    rclcpp::Publisher<rogidrive_msg::msg::RogidriveMessage>::SharedPtr publisher_;
 
-    std::array<float, 3> currentPose;
-    std::array<float, 3> shootVelocity; //speed, pitch, yaw
+    std::array<float, 3> currentPose;   //射出装置のx座標, 射出装置のy座標, 射出装置のヨー角
+    std::array<float, 3> shootVelocity; //speed, pitch, yaw(射撃諸元)
 };
 
 Shoot::Shoot()
@@ -57,6 +59,7 @@ Shoot::Shoot()
 {
     subscription_ = this->create_subscription<geometry_msgs::msg::Pose>("currentPose", 10, std::bind(&Shoot::topic_callback, this, _1));
     publisher_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("shootVelocity", 10);
+    publisher_ = this->create_publisher<rogidrive_msg::msg::RogidriveMessage>("odrive_cmd", 10);
 
 }
 
@@ -118,39 +121,39 @@ float Shoot::getPitch_maxV_low(float x_s_, float y_s_){
     }
 }
 
-void Shoot::calc_pose(float x_r, float y_r, float theta_l){
-    x_s = x_r_ - l_1*sin(theta_r) - l_2*sin(theta_yaw);
-    y_s = y_r_ + l_1*cos(theta_r) - l_2*cos(theta_yaw);
+void Shoot::calc_pose(float x_r, float y_r, float theta_r){
+    x_s = x_r - l_1*sin(theta_r) - l_2*sin(theta_yaw);
+    y_s = y_r + l_1*cos(theta_r) - l_2*cos(theta_yaw);
 }
 
 void Shoot::getVelocity(float x_r_, float y_r_, float theta_r_, float theta_l_pre, bool high_or_low){
 
     calc_pose(x_r_, y_r_, theta_r_);
 
-    shootVelocity[2] = getYaw(x_s_, y_s_, theta_s_);
+    shootVelocity[2] = getYaw(x_s, y_s, theta_s);
 
-    if(getV_thetadomain(x_s_, y_s_, theta_l_pre) <= v_max)
+    if(getV_thetadomain(x_s, y_s, theta_l_pre) <= v_max)
     {
-        shootVelocity[1] = getPitch_thetadomain(x_s_, y_s_, theta_l_pre);
-        shootVelocity[0] = getV_thetadomain(x_s_, y_s_, theta_l_pre);
+        shootVelocity[1] = getPitch_thetadomain(x_s, y_s, theta_l_pre);
+        shootVelocity[0] = getV_thetadomain(x_s, y_s, theta_l_pre);
     }
     else
     {
         shootVelocity[0] = v_max;
         if(high_or_low)
         {
-            shootVelocity[1] = getPitch_maxV_high(x_s_, y_s_);
+            shootVelocity[1] = getPitch_maxV_high(x_s, y_s);
         }
         else
         {
-            shootVelocity[1] = getPitch_maxV_low(x_s_, y_s_);
+            shootVelocity[1] = getPitch_maxV_low(x_s, y_s);
         }
     }
 }
 
 void Shoot::topic_callback(const geometry_msgs::msg::Pose & msg)
 {
-    auto message = std_msgs::msg::Float64MultiArray();
+    auto message_micon = std_msgs::msg::Float64MultiArray();
 
     tf2::Quaternion q(msg.orientation.x,msg.orientation.y,msg.orientation.z,msg.orientation.w);
     tf2::Matrix3x3 m(q);
@@ -161,9 +164,16 @@ void Shoot::topic_callback(const geometry_msgs::msg::Pose & msg)
 
     getVelocity(msg.position.x, msg.position.y, yaw, theta_l_pre, high_or_low);
 
-    message.data = {shootVelocity[0], shootVelocity[1], shootVelocity[2]};
+    message_micon.data = {shootVelocity[0], shootVelocity[1], shootVelocity[2]};
 
-    publisher_->publish(message);
+    publisher_->publish(message_micon);
+
+    auto message_odrive = rogidrive_msg::msg::RogidriveMessage();
+    message_odrive.name = "motor1";
+    message_odrive.mode = 0;
+    message_odrive.vel = (shootVelocity[0] / radius) * k_rot;
+    message_odrive.pos = 0.0;
+    publisher_->publish(message_odrive);
 
     // RCLCPP_INFO(this->get_logger(), "I heard position: [x: %f, y: %f, z: %f]", msg.position.x, msg.position.y, msg.position.z);
     // RCLCPP_INFO(this->get_logger(), "I heard orientation: [yaw: %f]", yaw);
